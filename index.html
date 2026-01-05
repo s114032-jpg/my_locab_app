@@ -1,0 +1,92 @@
+import { useState } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+
+export default function FlashcardApp() {
+  const [books, setBooks] = useState([]);
+  const [currentBook, setCurrentBook] = useState(null);
+  const [bookTitle, setBookTitle] = useState("");
+  const [unitTitle, setUnitTitle] = useState("");
+  const [wordData, setWordData] = useState({ word: "", pos: "", meaning: "", example: "" });
+
+  const addBook = () => {
+    if (!bookTitle) return;
+    setBooks([...books, { title: bookTitle, units: [] }]);
+    setBookTitle("");
+  };
+
+  const addUnit = () => {
+    if (!unitTitle || currentBook === null) return;
+    const updated = [...books];
+    updated[currentBook].units.push({ title: unitTitle, words: [] });
+    setBooks(updated);
+    setUnitTitle("");
+  };
+
+  const addWord = (unitIndex) => {
+    const updated = [...books];
+    updated[currentBook].units[unitIndex].words.push(wordData);
+    setBooks(updated);
+    setWordData({ word: "", pos: "", meaning: "", example: "" });
+  };
+
+  return (
+    <div className="p-6 space-y-6">
+      <h1 className="text-2xl font-bold">📘 英文單字卡 APP</h1>
+
+      <Card>
+        <CardContent className="space-y-2">
+          <h2 className="font-semibold">新增單字本（封面標題）</h2>
+          <input className="border p-2 w-full" value={bookTitle} onChange={e => setBookTitle(e.target.value)} placeholder="輸入單字本名稱" />
+          <Button onClick={addBook}>新增單字本</Button>
+        </CardContent>
+      </Card>
+
+      <div className="grid grid-cols-3 gap-4">
+        {books.map((book, i) => (
+          <Card key={i} onClick={() => setCurrentBook(i)} className="cursor-pointer">
+            <CardContent className="text-center font-semibold">{book.title}</CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {currentBook !== null && (
+        <Card>
+          <CardContent className="space-y-4">
+            <h2 className="text-xl font-bold">📕 {books[currentBook].title}</h2>
+
+            <div>
+              <h3 className="font-semibold">新增單元（小標題）</h3>
+              <input className="border p-2 w-full" value={unitTitle} onChange={e => setUnitTitle(e.target.value)} placeholder="單元名稱" />
+              <Button onClick={addUnit}>新增單元</Button>
+            </div>
+
+            {books[currentBook].units.map((unit, ui) => (
+              <Card key={ui}>
+                <CardContent className="space-y-2">
+                  <h3 className="font-bold">📂 {unit.title}</h3>
+
+                  <input className="border p-2 w-full" placeholder="單字" value={wordData.word} onChange={e => setWordData({ ...wordData, word: e.target.value })} />
+                  <input className="border p-2 w-full" placeholder="詞性" value={wordData.pos} onChange={e => setWordData({ ...wordData, pos: e.target.value })} />
+                  <input className="border p-2 w-full" placeholder="中文意思" value={wordData.meaning} onChange={e => setWordData({ ...wordData, meaning: e.target.value })} />
+                  <textarea className="border p-2 w-full" placeholder="例句" value={wordData.example} onChange={e => setWordData({ ...wordData, example: e.target.value })} />
+
+                  <Button onClick={() => addWord(ui)}>加入單字</Button>
+
+                  <ul className="list-disc pl-5">
+                    {unit.words.map((w, wi) => (
+                      <li key={wi}>
+                        <b>{w.word}</b> ({w.pos}) - {w.meaning}<br />
+                        <span className="text-sm italic">{w.example}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
