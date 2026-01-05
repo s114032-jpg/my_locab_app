@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的雲端單字本</title>
+    <style>
+        :root { --primary: #4a90e2; --bg: #f5f7fa; --card-front: #ffffff; --card-back: #eef6ff; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .container { max-width: 800px; width: 100%; }
+        
+        /* 表單樣式 */
+        .input-section { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 30px; }
+        input, select, textarea { width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+        button { background: var(--primary); color: white; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; width: 100%; font-size: 16px; transition: 0.3s; }
+        button:hover { background: #357abd; }
+
+        /* 單字本顯示樣式 */
+        .book-section { margin-top: 20px; }
+        .unit-title { border-left: 5px solid var(--primary); padding-left: 15px; margin: 30px 0 15px 0; color: #333; }
+        .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+
+        /* 單字卡翻轉效果 */
+        .vocab-card { height: 200px; perspective: 1000px; cursor: pointer; }
+        .card-inner { position: relative; width: 100%; height: 100%; transition: transform 0.6s; transform-style: preserve-3d; }
+        .vocab-card.flipped .card-inner { transform: rotateY(180deg); }
+        .front, .back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 15px; padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; align-items: center; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .front { background: var(--card-front); border: 1px solid #eee; }
+        .back { background: var(--card-back); transform: rotateY(180deg); color: #2c3e50; }
+
+        .word { font-size: 28px; font-weight: bold; color: var(--primary); }
+        .pos { font-style: italic; color: #888; margin-top: 5px; }
+        .meaning { font-size: 22px; font-weight: bold; margin-bottom: 10px; }
+        .example { font-size: 14px; color: #555; text-align: center; line-height: 1.4; }
+        .delete-btn { position: absolute; top: 10px; right: 10px; background: #ff7675; color: white; border: none; border-radius: 50%; width: 25px; height: 25px; cursor: pointer; z-index: 10; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1 style="text-align: center;">📖 我的英文單字本庫</h1>
+
+    <div class="input-section">
+        <h3>➕ 新增單字卡</h3>
+        <input type="text" id="bookName" placeholder="單字本封面 (例如：多益單字)">
+        <input type="text" id="unitName" placeholder="單元名稱 (例如：Unit 1 職場)">
+        <input type="text" id="word" placeholder="英文單字">
+        <input type="text" id="pos" placeholder="詞性 (例如：n., v., adj.)">
+        <input type="text" id="meaning" placeholder="中文意思">
+        <textarea id="example" placeholder="例句" rows="2"></textarea>
+        <button onclick="addCard()">加入單字本</button>
+    </div>
+
+    <div id="displayArea"></div>
+</div>
+
+<script>
+    let vocabData = JSON.parse(localStorage.getItem('myVocab')) || [];
+
+    function addCard() {
+        const card = {
+            id: Date.now(),
+            book: document.getElementById('bookName').value || "預設本子",
+            unit: document.getElementById('unitName').value || "一般單元",
+            word: document.getElementById('word').value,
+            pos: document.getElementById('pos').value,
+            meaning: document.getElementById('meaning').value,
+            example: document.getElementById('example').value
+        };
+
+        if(!card.word || !card.meaning) return alert("請至少填寫單字與意思！");
+
+        vocabData.push(card);
+        saveAndRender();
+        // 清空輸入框
+        document.getElementById('word').value = '';
+        document.getElementById('meaning').value = '';
+        document.getElementById('example').value = '';
+    }
+
+    function deleteCard(id, event) {
+        event.stopPropagation(); // 防止觸發翻牌
+        vocabData = vocabData.filter(c => c.id !== id);
+        saveAndRender();
+    }
+
+    function saveAndRender() {
+        localStorage.setItem('myVocab', JSON.stringify(vocabData));
+        render();
+    }
+
+    function render() {
+        const area = document.getElementById('displayArea');
+        area.innerHTML = '';
+
+        // 按單字本與單元分組
+        const books = [...new Set(vocabData.map(c => c.book))];
+
+        books.forEach(book => {
+            const bookHTML = `<h2>📘 ${book}</h2>`;
+            area.innerHTML += bookHTML;
+
+            const units = [...new Set(vocabData.filter(c => c.book === book).map(c => c.unit))];
+            units.forEach(unit => {
+                let unitHTML = `<div class="unit-section"><h3 class="unit-title">📍 ${unit}</h3><div class="card-grid">`;
+                
+                vocabData.filter(c => c.book === book && c.unit === unit).forEach(c => {
+                    unitHTML += `
+                        <div class="vocab-card" onclick="this.classList.toggle('flipped')">
+                            <div class="card-inner">
+                                <button class="delete-btn" onclick="deleteCard(${c.id}, event)">×</button>
+                                <div class="front">
+                                    <div class="word">${c.word}</div>
+                                    <div class="pos">${c.pos}</div>
+                                </div>
+                                <div class="back">
+                                    <div class="meaning">${c.meaning}</div>
+                                    <div class="example">${c.example}</div>
+                                </div>
+                            </div>
+                        </div>`;
+                });
+                
+                unitHTML += `</div></div>`;
+                area.innerHTML += unitHTML;
+            });
+        });
+    }
+
+    // 初始載入
+    render();
+</script>
+
+</body>
+</html>
